@@ -55,7 +55,15 @@ export function PreCheck({
         setHasMic(true);
 
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          const videoEl = videoRef.current;
+          videoEl.srcObject = stream;
+          // Explicitly force-mute via the DOM property (not just the JSX
+          // attribute) so the candidate never hears their own mic echoed
+          // back through this preview — see live-interview.tsx for details.
+          videoEl.muted = true;
+          videoEl.volume = 0;
+          videoEl.setAttribute('muted', 'true');
+          videoEl.play().catch(() => {});
         }
 
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
