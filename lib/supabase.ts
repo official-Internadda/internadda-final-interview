@@ -1,12 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+// This client is only ever imported inside app/api/**/route.ts (server-only
+// Next.js Route Handlers) — it is never bundled into client-side code. So it
+// is safe, and in fact necessary, to use the service_role key here: it
+// bypasses Row Level Security, which Supabase now enables by default on new
+// projects/tables. Using the anon key here caused every write (creating
+// interviews, attempts, seeding, etc.) to fail with:
+//   "new row violates row-level security policy for table ..."
+// Falling back to the anon key keeps local/read-only setups working if only
+// that key is provided, but service_role should always be preferred.
+const supabaseServerKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServerKey);
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+  ? createClient(supabaseUrl, supabaseServerKey, {
       auth: { persistSession: false }
     })
   : null;
