@@ -115,10 +115,28 @@ export function LiveInterview({
     candidateAnswerRef.current = candidateAnswer;
   }, [candidateAnswer]);
 
-  // Attach webcam stream to video element
+  // Attach webcam stream to video element.
+  //
+  // IMPORTANT: `mediaStream` contains BOTH the camera video track AND the
+  // microphone audio track. Relying only on the JSX `muted` attribute on
+  // <video> is not reliable across browsers once `srcObject` is assigned
+  // via JS after mount — the audio track can end up playing back live,
+  // which is exactly what caused the candidate to hear their own voice
+  // echo in their earphones the instant they spoke. Explicitly setting the
+  // `.muted` DOM property (and volume) guarantees this self-view element
+  // is always silent, regardless of the mic being actively recorded by
+  // SpeechRecognition in parallel.
   useEffect(() => {
     if (videoRef.current && mediaStream) {
-      videoRef.current.srcObject = mediaStream;
+      const videoEl = videoRef.current;
+      videoEl.srcObject = mediaStream;
+      videoEl.muted = true;
+      videoEl.volume = 0;
+      videoEl.setAttribute('muted', 'true');
+      // Some browsers require play() to be (re)called after srcObject changes.
+      videoEl.play().catch(() => {
+        /* autoplay may be blocked until user interaction; harmless here */
+      });
     }
   }, [mediaStream]);
 
@@ -1006,4 +1024,3 @@ export function LiveInterview({
     </div>
   );
 }
-
